@@ -1,0 +1,55 @@
+{{ header }}
+from typing import Any, Type
+
+from ...client.client import Client
+from ...transport import AsyncTransport, TransportError
+{% if utility_imports %}
+from ...client.utils import {{ utility_imports|join(", ") }}
+{% endif %}
+{% for client in core_clients %}
+from .{{ client.namespace }} import {{ client.class_name }}
+{% endfor %}
+from .plugins import PluginsClient
+
+
+class {{ class_name }}(Client):
+    """Low-level client generated from the AOS data-plane OpenAPI."""
+
+{% for client in core_clients %}
+    {{ client.namespace }}: {{ client.class_name }}
+{% endfor %}
+    plugins: PluginsClient
+
+    def __init__(
+        self,
+        hosts: Any = None,
+        transport_class: Type[AsyncTransport] = AsyncTransport,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(hosts, transport_class, **kwargs)
+{% for client in core_clients %}
+        self.{{ client.namespace }} = {{ client.class_name }}(self)
+{% endfor %}
+        self.plugins = PluginsClient(self)
+
+    def __repr__(self) -> Any:
+        try:
+            connections: Any = self.transport.hosts
+            if len(connections) > 5:
+                connections = connections[:5] + ["..."]
+            return f"<{self.__class__.__name__}({connections})>"
+        except Exception:
+            return super().__repr__()
+
+    async def __aenter__(self) -> Any:
+        if hasattr(self.transport, "_async_call"):
+            await self.transport._async_call()
+        return self
+
+    async def __aexit__(self, *_: Any) -> None:
+        await self.close()
+
+    async def close(self) -> None:
+        """Closes the transport and all internal connections."""
+        await self.transport.close()
+{{ methods }}

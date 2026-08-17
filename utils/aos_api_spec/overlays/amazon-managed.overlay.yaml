@@ -1,0 +1,195 @@
+overlay: 1.0.0
+info:
+  title: AOS UltraWarm API extensions
+  version: 1.0.0
+extends: ../opensearch-openapi.yaml
+actions:
+  - target: "$.paths"
+    description: Add the public AOS UltraWarm migration endpoints documented by the overlay guide.
+    update:
+      /_ultrawarm/migration/{index}/_warm:
+        post:
+          operationId: ultrawarm.migrate_to_warm.0
+          x-operation-group: ultrawarm.migrate_to_warm
+          x-distributions:
+            - amazon-managed
+          x-version-added: "7.1"
+          description: Starts an asynchronous migration from hot storage to UltraWarm.
+          parameters:
+            - $ref: "#/components/parameters/ultrawarm.migrate___path.index"
+            - $ref: "#/components/parameters/ultrawarm.migrate___query.cluster_manager_timeout"
+          responses:
+            "200":
+              $ref: "#/components/responses/ultrawarm.migrate___200"
+      /_ultrawarm/migration/{index}/_hot:
+        post:
+          operationId: ultrawarm.migrate_to_hot.0
+          x-operation-group: ultrawarm.migrate_to_hot
+          x-distributions:
+            - amazon-managed
+          x-version-added: "7.1"
+          description: Starts an asynchronous migration from UltraWarm to hot storage.
+          parameters:
+            - $ref: "#/components/parameters/ultrawarm.migrate___path.index"
+            - $ref: "#/components/parameters/ultrawarm.migrate___query.cluster_manager_timeout"
+          responses:
+            "200":
+              $ref: "#/components/responses/ultrawarm.migrate___200"
+      /_ultrawarm/migration/{index}/_cold:
+        post:
+          operationId: ultrawarm.migrate_to_cold.0
+          x-operation-group: ultrawarm.migrate_to_cold
+          x-distributions:
+            - amazon-managed
+          x-version-added: "7.10"
+          description: Starts an asynchronous migration from UltraWarm to cold storage.
+          parameters:
+            - $ref: "#/components/parameters/ultrawarm.migrate___path.index"
+            - $ref: "#/components/parameters/ultrawarm.migrate___query.cluster_manager_timeout"
+          responses:
+            "200":
+              $ref: "#/components/responses/ultrawarm.migrate___200"
+      /_ultrawarm/migration/_cancel/{index}:
+        post:
+          operationId: ultrawarm.cancel_migration.0
+          x-operation-group: ultrawarm.cancel_migration
+          x-distributions:
+            - amazon-managed
+          x-version-added: "7.1"
+          description: Cancels an in-progress UltraWarm migration.
+          parameters:
+            - $ref: "#/components/parameters/ultrawarm.migrate___path.index"
+          responses:
+            "200":
+              $ref: "#/components/responses/ultrawarm.migrate___200"
+      /_ultrawarm/migration/{index}/_status:
+        get:
+          operationId: ultrawarm.get_migration_status.0
+          x-operation-group: ultrawarm.get_migration_status
+          x-distributions:
+            - amazon-managed
+          x-version-added: "7.1"
+          description: Returns migration status for an index.
+          parameters:
+            - $ref: "#/components/parameters/ultrawarm.migrate___path.index"
+          responses:
+            "200":
+              $ref: "#/components/responses/ultrawarm.get_migration_status___200"
+      /_ultrawarm/migration/_status:
+        get:
+          operationId: ultrawarm.list_migration_status.0
+          x-operation-group: ultrawarm.list_migration_status
+          x-distributions:
+            - amazon-managed
+          x-version-added: "7.1"
+          description: Lists active UltraWarm migrations.
+          responses:
+            "200":
+              $ref: "#/components/responses/ultrawarm.list_migration_status___200"
+
+  - target: "$.components.parameters"
+    description: Add shared UltraWarm path and query parameters.
+    update:
+      ultrawarm.migrate___path.index:
+        name: index
+        in: path
+        required: true
+        description: The name of the index to migrate.
+        schema:
+          type: string
+        x-distributions:
+          - amazon-managed
+      ultrawarm.migrate___query.cluster_manager_timeout:
+        name: cluster_manager_timeout
+        in: query
+        required: false
+        description: Time to wait for a response from the cluster manager node.
+        schema:
+          type: string
+        x-distributions:
+          - amazon-managed
+
+  - target: "$.components.responses"
+    description: Add UltraWarm response definitions.
+    update:
+      ultrawarm.migrate___200:
+        description: Migration request accepted.
+        content:
+          application/json:
+            schema:
+              type: object
+              x-distributions:
+                - amazon-managed
+              properties:
+                acknowledged:
+                  type: boolean
+      ultrawarm.get_migration_status___200:
+        description: Migration status for the requested index.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ultrawarm._common___MigrationStatusResponse"
+      ultrawarm.list_migration_status___200:
+        description: Active UltraWarm migrations.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/ultrawarm._common___MigrationStatusEntry"
+
+  - target: "$.components.schemas"
+    description: Add UltraWarm migration schemas.
+    update:
+      ultrawarm._common___MigrationStatusResponse:
+        type: object
+        x-distributions:
+          - amazon-managed
+        properties:
+          migration_status:
+            $ref: "#/components/schemas/ultrawarm._common___MigrationStatus"
+      ultrawarm._common___MigrationStatus:
+        type: object
+        x-distributions:
+          - amazon-managed
+        properties:
+          index:
+            type: string
+          state:
+            type: string
+          migration_type:
+            type: string
+            enum:
+              - HOT_TO_WARM
+              - WARM_TO_HOT
+              - WARM_TO_COLD
+          failure_reason:
+            type: string
+          shard_level_status:
+            $ref: "#/components/schemas/ultrawarm._common___ShardLevelStatus"
+      ultrawarm._common___ShardLevelStatus:
+        type: object
+        x-distributions:
+          - amazon-managed
+        properties:
+          pending:
+            type: integer
+          running:
+            type: integer
+          succeeded:
+            type: integer
+          failed:
+            type: integer
+          total:
+            type: integer
+      ultrawarm._common___MigrationStatusEntry:
+        type: object
+        x-distributions:
+          - amazon-managed
+        properties:
+          index:
+            type: string
+          migration_type:
+            type: string
+          state:
+            type: string

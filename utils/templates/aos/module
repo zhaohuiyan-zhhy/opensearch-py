@@ -1,0 +1,12 @@
+{{ header }}
+{% if needs_warnings %}
+import warnings
+{% endif %}
+from typing import Any
+
+{% if utility_imports %}
+from ...client.utils import {{ utility_imports|join(", ") }}
+{% endif %}
+
+class {{ class_name }}(NamespacedClient):
+{{ methods }}

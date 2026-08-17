@@ -280,6 +280,18 @@ class TestUrllib3HttpConnection(TestCase):
 
         self.assertIsInstance(con.pool, urllib3.HTTPSConnectionPool)
 
+    def test_ssl_assert_hostname(self) -> None:
+        con = Urllib3HttpConnection(use_ssl=True, ssl_assert_hostname=True)
+        self.assertIsNone(con.pool.assert_hostname)
+
+        con = Urllib3HttpConnection(use_ssl=True, ssl_assert_hostname=False)
+        self.assertFalse(con.pool.assert_hostname)
+
+        con = Urllib3HttpConnection(
+            use_ssl=True, ssl_assert_hostname="search.example.com"
+        )
+        self.assertEqual("search.example.com", con.pool.assert_hostname)
+
     def test_nowarn_when_uses_https_if_verify_certs_is_off(self) -> None:
         with warnings.catch_warnings(record=True) as w:
             con = Urllib3HttpConnection(

@@ -1,0 +1,19 @@
+{{ header }}
+from typing import Any
+
+from ...client.utils import NamespacedClient
+{% for plugin in plugins %}
+from ..plugins.{{ plugin.namespace }} import {{ plugin.class_name }}
+{% endfor %}
+
+
+class PluginsClient(NamespacedClient):
+{% for plugin in plugins %}
+    {{ plugin.namespace }}: {{ plugin.class_name }}
+{% endfor %}
+
+    def __init__(self, client: Any) -> None:
+        super().__init__(client)
+{% for plugin in plugins %}
+        self.{{ plugin.namespace }} = {{ plugin.class_name }}(client)
+{% endfor %}

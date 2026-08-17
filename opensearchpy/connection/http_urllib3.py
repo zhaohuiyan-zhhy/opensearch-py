@@ -87,7 +87,8 @@ class Urllib3HttpConnection(Connection):
     :arg ssl_version: version of the SSL protocol to use. Choices are:
         SSLv23 (default) SSLv2 SSLv3 TLSv1 (see ``PROTOCOL_*`` constants in the
         ``ssl`` module for exact options for your environment).
-    :arg ssl_assert_hostname: use hostname verification if not `False`
+    :arg ssl_assert_hostname: use hostname verification if `True`, use the
+        supplied hostname if a string, and disable verification if `False`
     :arg ssl_assert_fingerprint: verify the supplied certificate fingerprint if not `None`
     :arg pool_maxsize: the number of connections which will be kept open to this
         host. See https://urllib3.readthedocs.io/en/1.4/pools.html#api for more
@@ -176,6 +177,8 @@ class Urllib3HttpConnection(Connection):
 
         elif self.use_ssl:
             pool_class = urllib3.HTTPSConnectionPool
+            if ssl_assert_hostname is True:
+                ssl_assert_hostname = None
             kw.update(
                 {
                     "ssl_version": ssl_version,

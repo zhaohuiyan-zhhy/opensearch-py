@@ -146,3 +146,13 @@ def generate(session: Any) -> None:
     session.run("python", "utils/generate_api.py")
     session.run("nox", "-s", "format", external=True)
     session.run("python", "utils/changelog_updater.py")
+
+
+@nox.session()  # type: ignore
+def generate_aos(session: Any) -> None:
+    """
+    generates the AOS data-plane client from the bundled OpenAPI spec and Overlay
+    :param session: current nox session
+    """
+    session.install("-rdev-requirements.txt")
+    session.run("python", "-m", "utils.generate_aos_api", *session.posargs)

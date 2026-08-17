@@ -42,6 +42,7 @@ VERSION = __version__ = (_major, _minor, _patch)
 logger = logging.getLogger("opensearch")
 logger.addHandler(logging.NullHandler())
 
+from .aos import AOSOpenSearch
 from .client import OpenSearch
 from .client.grpc_client import OpenSearchGrpc
 from .connection import (
@@ -144,6 +145,7 @@ warnings.simplefilter("default", category=OpenSearchDeprecationWarning, append=T
 __all__ = [
     "OpenSearch",
     "OpenSearchGrpc",
+    "AOSOpenSearch",
     "Transport",
     "ConnectionPool",
     "ConnectionSelector",
@@ -248,6 +250,7 @@ __all__ = [
 ]
 
 try:
+    from ._async.aos import AsyncAOSOpenSearch
     from ._async.client import AsyncOpenSearch
     from ._async.http_aiohttp import AIOHttpConnection, AsyncConnection
     from ._async.transport import AsyncTransport
@@ -259,6 +262,7 @@ try:
         "AsyncConnection",
         "AsyncTransport",
         "AsyncOpenSearch",
+        "AsyncAOSOpenSearch",
         "AsyncHttpConnection",
         "AWSV4SignerAsyncAuth",
     ]

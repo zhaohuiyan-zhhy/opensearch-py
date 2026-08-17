@@ -8,6 +8,7 @@ maxdepth: 1
 ---
 
 api-ref
+aos-client-codegen-design
 genindex
 License <https://github.com/opensearch-project/opensearch-py/blob/main/LICENSE.txt>
 Contributing <https://github.com/opensearch-project/opensearch-py/blob/main/CONTRIBUTING.md>
