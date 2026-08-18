@@ -36,7 +36,7 @@ opensearchpy/aos
 4. 生成完整 AOS Client，不继承 OSS `OpenSearch` 来补充少量差异。
 5. REST 方法继续使用 OSS Jinja method templates。
 6. 原模板不能描述完整独立包时，增加 AOS package templates。
-7. 当前只生成 AOS 数据面 Client，不生成 AOSS，也不生成 AWS 控制面 Client。
+7. AOS 和 AOSS 使用同一套通用生成能力及各自独立配置，不生成 AWS 控制面 Client。
 
 ## 2. 背景
 
@@ -72,7 +72,7 @@ AOS 数据面与 OSS 数据面高度相似，但接口集合和接口定义并�
 
 ### 3.1 目标
 
-- 从调用者指定的基础 OpenAPI 和 AOS Overlay 生成 Client。
+- 从仓库内固定的基础 OpenAPI 和 AOS Overlay 生成 Client。
 - 支持 Overlay `update`、`remove` 和 distribution annotation。
 - Overlay target 或 local `$ref` 失效时立即失败。
 - 生成完整同步和异步 AOS Client。
@@ -83,7 +83,6 @@ AOS 数据面与 OSS 数据面高度相似，但接口集合和接口定义并�
 
 ### 3.2 非目标
 
-- AOSS 数据面 Client。
 - AOS/AOSS 控制面 Client。
 - SigV4 签名、凭证获取和刷新。
 - AWS endpoint resolver。
@@ -384,7 +383,7 @@ AsyncTransport     -> Transport
 | 项目 | OSS | AOS | 原因 |
 | --- | --- | --- | --- |
 | 入口 | `generate_api.py` | `generate_aos_api.py` | 不改变既有 OSS 流程 |
-| 输入 | 固定下载 OSS latest | CLI 指定 spec + Overlay | AOS 需要两个固定版本输入 |
+| 输入 | 固定下载 OSS latest | 仓库内固定 spec + Overlay | AOS 需要两个固定版本输入 |
 | spec 处理 | 直接解析 | 合并、distribution filter、ref 校验 | 形成真实 AOS 接口集合 |
 | parser | `read_modules()` | 复用同一个 `read_modules()` | 保持转换规则一致 |
 | ISM | parser 跳过，使用手写 Client | alias 后从 spec 生成 | 独立 AOS package 没有 OSS 手写兜底 |
@@ -553,7 +552,8 @@ sphinx-build -W
 3. 如果发布 merged AOS spec，可在更新流程中校验本地 `spec + Overlay` 的合并结果，但用户
    运行生成器时仍不需要选择输入文件。
 4. OSS generator 如果提供正式的 document parser API，移除 `LocalSpecResponse` 适配层。
-5. AOSS 应使用独立 Overlay、独立输出 package 和独立验收，不在 AOS 生成器中增加条件分支。
+5. AOSS 已使用独立 Overlay、独立输出 package 和独立验收；详细设计见
+   `aoss-client-codegen-design.md`。
 
 ## 14. 验收标准
 

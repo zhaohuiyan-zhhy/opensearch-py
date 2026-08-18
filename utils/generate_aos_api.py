@@ -13,6 +13,7 @@ import copy
 import filecmp
 import shutil
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Tuple, cast
 from unittest.mock import patch
@@ -26,13 +27,8 @@ from utils import generate_api as oss_generator
 from utils.aos_api_spec import build_distribution_spec
 
 CODE_ROOT = Path(__file__).absolute().parent.parent
-DISTRIBUTION = "amazon-managed"
 AOS_SPEC_ROOT = CODE_ROOT / "utils" / "aos_api_spec"
 API_SPEC_PATH = AOS_SPEC_ROOT / "opensearch-openapi.yaml"
-OVERLAY_PATH = AOS_SPEC_ROOT / "overlays" / "amazon-managed.overlay.yaml"
-MERGED_SPEC_PATH = CODE_ROOT / "build" / "aos-api-spec" / "opensearch-aos.yaml"
-ASYNC_OUTPUT = Path("opensearchpy/_async/aos")
-SYNC_OUTPUT = Path("opensearchpy/aos")
 GENERATED_HEADER_PATH = CODE_ROOT / "utils" / "generated_file_headers.txt"
 HTTP_METHODS = {
     "delete",
@@ -66,6 +62,51 @@ LICENSE_HEADER = """# SPDX-License-Identifier: Apache-2.0
 PARSER_NAMESPACE_ALIASES = {"ism": "_aos_codegen_ism"}
 
 
+@dataclass(frozen=True)
+class ClientConfig:
+    """Fixed inputs, outputs, and validation rules for one AWS distribution."""
+
+    label: str
+    distribution: str
+    overlay_path: Path
+    merged_spec_path: Path
+    async_output: Path
+    sync_output: Path
+    async_class_name: str
+    sync_class_name: str
+    nox_session: str
+    required_operations: Tuple[str, ...] = ()
+    forbidden_operations: Tuple[str, ...] = ()
+    required_namespaces: Tuple[str, ...] = ()
+
+
+AOS_CONFIG = ClientConfig(
+    label="AOS",
+    distribution="amazon-managed",
+    overlay_path=AOS_SPEC_ROOT / "overlays" / "amazon-managed.overlay.yaml",
+    merged_spec_path=CODE_ROOT / "build" / "aos-api-spec" / "opensearch-aos.yaml",
+    async_output=Path("opensearchpy/_async/aos"),
+    sync_output=Path("opensearchpy/aos"),
+    async_class_name="AsyncAOSOpenSearch",
+    sync_class_name="AOSOpenSearch",
+    nox_session="generate_aos",
+    required_operations=(
+        "ultrawarm.cancel_migration",
+        "ultrawarm.get_migration_status",
+        "ultrawarm.list_migration_status",
+        "ultrawarm.migrate_to_cold",
+        "ultrawarm.migrate_to_hot",
+        "ultrawarm.migrate_to_warm",
+    ),
+    required_namespaces=("ism",),
+)
+DISTRIBUTION = AOS_CONFIG.distribution
+OVERLAY_PATH = AOS_CONFIG.overlay_path
+MERGED_SPEC_PATH = AOS_CONFIG.merged_spec_path
+ASYNC_OUTPUT = AOS_CONFIG.async_output
+SYNC_OUTPUT = AOS_CONFIG.sync_output
+
+
 class LocalSpecResponse:
     """Minimal requests response used to feed a local spec to the OSS parser."""
 
@@ -78,12 +119,12 @@ class LocalSpecResponse:
         )
 
 
-def generated_header() -> str:
-    """Returns the license and AOS-specific generated-file warning."""
+def generated_header(config: ClientConfig = AOS_CONFIG) -> str:
+    """Returns the license and distribution-specific generated-file warning."""
     warning = GENERATED_HEADER_PATH.read_text(encoding="utf-8").strip()
     warning = warning.replace(
         "`nox -rs generate`",
-        "`nox -rs generate_aos`",
+        f"`nox -rs {config.nox_session}`",
     )
     return f"{LICENSE_HEADER}\n{warning}\n"
 
@@ -174,31 +215,41 @@ def spec_operation_names(document: Mapping[str, Any]) -> List[str]:
     return sorted(operations)
 
 
-def validate_modules(document: Mapping[str, Any], modules: Mapping[str, Any]) -> None:
-    """Checks that every filtered AOS operation group was generated."""
+def validate_modules(
+    document: Mapping[str, Any],
+    modules: Mapping[str, Any],
+    config: ClientConfig = AOS_CONFIG,
+) -> None:
+    """Checks that every filtered operation group was generated."""
     expected_operations = set(spec_operation_names(document))
     operations = set(operation_names(modules))
     if operations != expected_operations:
         missing = sorted(expected_operations - operations)
         unexpected = sorted(operations - expected_operations)
         raise ValueError(
-            "Generated AOS operation set does not match the filtered spec; "
+            f"Generated {config.label} operation set does not match the filtered spec; "
             f"missing={missing}, unexpected={unexpected}"
         )
 
-    required = {
-        "ultrawarm.cancel_migration",
-        "ultrawarm.get_migration_status",
-        "ultrawarm.list_migration_status",
-        "ultrawarm.migrate_to_cold",
-        "ultrawarm.migrate_to_hot",
-        "ultrawarm.migrate_to_warm",
-    }
+    required = set(config.required_operations)
     missing = sorted(required - operations)
     if missing:
-        raise ValueError(f"AOS Overlay operations were not generated: {missing}")
-    if "ism" not in modules:
-        raise ValueError("AOS spec operations were not generated: ism namespace")
+        raise ValueError(
+            f"{config.label} Overlay operations were not generated: {missing}"
+        )
+
+    forbidden = sorted(set(config.forbidden_operations) & operations)
+    if forbidden:
+        raise ValueError(
+            f"{config.label} excluded operations were generated: {forbidden}"
+        )
+
+    missing_namespaces = sorted(set(config.required_namespaces) - set(modules))
+    if missing_namespaces:
+        raise ValueError(
+            f"{config.label} spec namespaces were not generated: "
+            f"{missing_namespaces}"
+        )
 
 
 def class_name(namespace: str) -> str:
@@ -220,10 +271,22 @@ def render_methods(module: Any) -> str:
     return "".join(api.to_python() for api in module_apis(module))
 
 
-def render_template(name: str, **context: Any) -> str:
-    """Renders an AOS package template using the OSS Jinja environment."""
+def render_template(
+    name: str, config: ClientConfig = AOS_CONFIG, **context: Any
+) -> str:
+    """Renders an AWS package template using the OSS Jinja environment."""
     template = oss_generator.jinja_env.get_template(f"aos/{name}")
-    return cast(str, template.render(header=generated_header(), **context)) + "\n"
+    return (
+        cast(
+            str,
+            template.render(
+                header=generated_header(config),
+                service_name=config.label,
+                **context,
+            ),
+        )
+        + "\n"
+    )
 
 
 def write_file(root: Path, relative_path: Path, content: str) -> None:
@@ -259,10 +322,14 @@ def split_modules(
     return root_module, core, plugins
 
 
-def render_async_tree(output_root: Path, modules: Mapping[str, Any]) -> Path:
-    """Generates the complete asynchronous AOS client package."""
-    async_root = output_root / ASYNC_OUTPUT
-    sync_root = output_root / SYNC_OUTPUT
+def render_async_tree(
+    output_root: Path,
+    modules: Mapping[str, Any],
+    config: ClientConfig = AOS_CONFIG,
+) -> Path:
+    """Generates one complete asynchronous AWS client package."""
+    async_root = output_root / config.async_output
+    sync_root = output_root / config.sync_output
     shutil.rmtree(async_root, ignore_errors=True)
     shutil.rmtree(sync_root, ignore_errors=True)
 
@@ -273,9 +340,10 @@ def render_async_tree(output_root: Path, modules: Mapping[str, Any]) -> Path:
         methods = render_methods(module)
         write_file(
             output_root,
-            ASYNC_OUTPUT / "client" / f"{namespace}.py",
+            config.async_output / "client" / f"{namespace}.py",
             render_template(
                 "module",
+                config=config,
                 class_name=class_name(namespace),
                 methods=methods,
                 needs_warnings="warnings." in methods,
@@ -287,9 +355,10 @@ def render_async_tree(output_root: Path, modules: Mapping[str, Any]) -> Path:
         methods = render_methods(module)
         write_file(
             output_root,
-            ASYNC_OUTPUT / "plugins" / f"{namespace}.py",
+            config.async_output / "plugins" / f"{namespace}.py",
             render_template(
                 "module",
+                config=config,
                 class_name=class_name(namespace),
                 methods=methods,
                 needs_warnings="warnings." in methods,
@@ -299,9 +368,10 @@ def render_async_tree(output_root: Path, modules: Mapping[str, Any]) -> Path:
 
     write_file(
         output_root,
-        ASYNC_OUTPUT / "client" / "plugins.py",
+        config.async_output / "client" / "plugins.py",
         render_template(
             "plugins_client",
+            config=config,
             plugins=[
                 {
                     "namespace": namespace,
@@ -313,10 +383,11 @@ def render_async_tree(output_root: Path, modules: Mapping[str, Any]) -> Path:
     )
     write_file(
         output_root,
-        ASYNC_OUTPUT / "client" / "__init__.py",
+        config.async_output / "client" / "__init__.py",
         render_template(
             "root_client",
-            class_name="AsyncAOSOpenSearch",
+            config=config,
+            class_name=config.async_class_name,
             core_clients=[
                 {
                     "namespace": namespace,
@@ -330,9 +401,10 @@ def render_async_tree(output_root: Path, modules: Mapping[str, Any]) -> Path:
     )
     write_file(
         output_root,
-        ASYNC_OUTPUT / "plugins" / "__init__.py",
+        config.async_output / "plugins" / "__init__.py",
         render_template(
             "package_init",
+            config=config,
             imports=[
                 {
                     "module": namespace,
@@ -344,23 +416,28 @@ def render_async_tree(output_root: Path, modules: Mapping[str, Any]) -> Path:
     )
     write_file(
         output_root,
-        ASYNC_OUTPUT / "__init__.py",
+        config.async_output / "__init__.py",
         render_template(
             "package_init",
-            imports=[{"module": "client", "name": "AsyncAOSOpenSearch"}],
+            config=config,
+            imports=[{"module": "client", "name": config.async_class_name}],
         ),
     )
     return async_root
 
 
-def unasync_tree(output_root: Path, async_root: Path) -> Path:
-    """Derives the synchronous AOS client package from the async package."""
-    sync_root = output_root / SYNC_OUTPUT
+def unasync_tree(
+    output_root: Path,
+    async_root: Path,
+    config: ClientConfig = AOS_CONFIG,
+) -> Path:
+    """Derives the synchronous AWS client package from the async package."""
+    sync_root = output_root / config.sync_output
     rule = unasync.Rule(
-        fromdir=f"/{ASYNC_OUTPUT.as_posix()}/",
-        todir=f"/{SYNC_OUTPUT.as_posix()}/",
+        fromdir=f"/{config.async_output.as_posix()}/",
+        todir=f"/{config.sync_output.as_posix()}/",
         additional_replacements={
-            "AsyncAOSOpenSearch": "AOSOpenSearch",
+            config.async_class_name: config.sync_class_name,
             "AsyncTransport": "Transport",
         },
     )
@@ -375,10 +452,14 @@ def unasync_tree(output_root: Path, async_root: Path) -> Path:
     return sync_root
 
 
-def generate_client_tree(output_root: Path, modules: Mapping[str, Any]) -> None:
-    """Generates the complete async and sync AOS client trees."""
-    async_root = render_async_tree(output_root, modules)
-    unasync_tree(output_root, async_root)
+def generate_client_tree(
+    output_root: Path,
+    modules: Mapping[str, Any],
+    config: ClientConfig = AOS_CONFIG,
+) -> None:
+    """Generates complete async and sync AWS client trees."""
+    async_root = render_async_tree(output_root, modules, config)
+    unasync_tree(output_root, async_root, config)
 
 
 def compare_directories(expected: Path, actual: Path) -> List[str]:
@@ -397,13 +478,18 @@ def compare_directories(expected: Path, actual: Path) -> List[str]:
     return differences
 
 
-def check_generated_tree(modules: Mapping[str, Any]) -> None:
-    """Fails when checked-in AOS clients differ from fresh generation."""
-    with tempfile.TemporaryDirectory(prefix="opensearch-py-aos-codegen-") as temp:
+def check_generated_tree(
+    modules: Mapping[str, Any],
+    config: ClientConfig = AOS_CONFIG,
+) -> None:
+    """Fails when checked-in clients differ from fresh generation."""
+    with tempfile.TemporaryDirectory(
+        prefix=f"opensearch-py-{config.label.lower()}-codegen-"
+    ) as temp:
         temporary_root = Path(temp)
-        generate_client_tree(temporary_root, modules)
+        generate_client_tree(temporary_root, modules, config)
         differences = []
-        for relative in (ASYNC_OUTPUT, SYNC_OUTPUT):
+        for relative in (config.async_output, config.sync_output):
             differences.extend(
                 compare_directories(
                     temporary_root / relative,
@@ -412,7 +498,7 @@ def check_generated_tree(modules: Mapping[str, Any]) -> None:
             )
         if differences:
             details = "\n".join(f"- {difference}" for difference in differences)
-            raise SystemExit(f"Generated AOS client is stale:\n{details}")
+            raise SystemExit(f"Generated {config.label} client is stale:\n{details}")
 
 
 def dump_spec(document: Mapping[str, Any], output: Path) -> None:
@@ -429,27 +515,36 @@ def dump_spec(document: Mapping[str, Any], output: Path) -> None:
     )
 
 
-def main() -> None:
-    """Generates the AOS data-plane client from the bundled spec and Overlay."""
+def run_generation(config: ClientConfig) -> None:
+    """Generates one data-plane client from the bundled spec and Overlay."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
 
-    document = build_distribution_spec(API_SPEC_PATH, OVERLAY_PATH, DISTRIBUTION)
-    dump_spec(document, MERGED_SPEC_PATH)
+    document = build_distribution_spec(
+        API_SPEC_PATH,
+        config.overlay_path,
+        config.distribution,
+    )
+    dump_spec(document, config.merged_spec_path)
     validate_parser_input(document)
     modules = parse_modules(document)
-    validate_modules(document, modules)
+    validate_modules(document, modules, config)
 
     if args.check:
-        check_generated_tree(modules)
-        print("Generated AOS client is up to date.")
+        check_generated_tree(modules, config)
+        print(f"Generated {config.label} client is up to date.")
     else:
-        generate_client_tree(CODE_ROOT, modules)
+        generate_client_tree(CODE_ROOT, modules, config)
         print(
-            f"Generated AOS client from {len(document['paths'])} paths and "
+            f"Generated {config.label} client from {len(document['paths'])} paths and "
             f"{len(operation_names(modules))} methods."
         )
+
+
+def main() -> None:
+    """Generates the AOS data-plane client from bundled inputs."""
+    run_generation(AOS_CONFIG)
 
 
 if __name__ == "__main__":

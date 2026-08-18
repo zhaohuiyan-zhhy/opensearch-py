@@ -1,0 +1,239 @@
+overlay: 1.0.0
+info:
+  title: AOSS-specific API extensions and exclusions
+  version: 1.1.0
+extends: ../opensearch-openapi.yaml
+actions:
+  # AOSS collection endpoints do not expose the root ping operation.
+  - target: "$.paths['/'].head"
+    remove: true
+
+  # Keep field_caps fields in the query string. The AOSS proxy does not consume
+  # the same-named field from a request body.
+  - target: "$.components.requestBodies.field_caps.content['application/json'].schema.properties.fields"
+    remove: true
+
+  # AOSS resolve-index responses can omit the OSS-required attributes array.
+  - target: "$.components.schemas['indices.resolve_index___ResolveIndexItem']"
+    update:
+      required:
+        - name
+
+  - target: "$.components.responses['indices.resolve_index___200'].content['application/json'].schema"
+    update:
+      required:
+        - aliases
+        - indices
+
+  - target: "$.components.requestBodies['snapshot.restore'].content['application/json'].schema.properties"
+    description: Add AOSS cross-collection restore fields.
+    update:
+      sourceCollectionId:
+        x-distributions:
+          - amazon-serverless
+        type: string
+        pattern: "^[a-z0-9]{3,40}$"
+        description: The source collection ID used for cross-collection restore.
+      allow_regex:
+        x-distributions:
+          - amazon-serverless
+        type: boolean
+        default: false
+        description: Interpret rename_pattern and rename_replacement as regular expressions.
+
+  # The Python OSS parser requires operation request bodies to use a component
+  # reference, so model the AOSS preflight body as a reusable request body.
+  - target: "$.components.requestBodies"
+    description: Add the AOSS cross-collection snapshot preflight body.
+    update:
+      aoss.snapshot.get:
+        required: false
+        x-distributions:
+          - amazon-serverless
+        description: Selects the source collection repository used by the preflight request.
+        content:
+          application/json:
+            schema:
+              type: object
+              x-distributions:
+                - amazon-serverless
+              properties:
+                sourceCollectionId:
+                  type: string
+                  pattern: "^[a-z0-9]{3,40}$"
+                  description: The collection whose snapshot repository is queried.
+
+  - target: "$.paths['/_snapshot/{repository}/{snapshot}'].get"
+    description: Attach the AOSS cross-collection snapshot preflight body.
+    update:
+      requestBody:
+        $ref: "#/components/requestBodies/aoss.snapshot.get"
+
+  - target: "$.components.requestBodies['snapshot.create_repository'].content['application/json'].schema.properties"
+    description: Add the AOSS snapshot repository KMS configuration.
+    update:
+      crypto_settings:
+        x-distributions:
+          - amazon-serverless
+        type: object
+        description: Encryption configuration for the snapshot repository.
+        properties:
+          kms_key_arn:
+            type: string
+            description: The ARN of the AWS KMS key used to encrypt snapshot data.
+          encryption_context:
+            type: object
+            additionalProperties:
+              type: string
+            description: Encryption context passed to AWS KMS.
+        required:
+          - kms_key_arn
+
+  # AOSS supports only the aliases, indices, and templates CAT operations.
+  # Source: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html
+  - target: "$.paths['/_cat']"
+    remove: true
+  - target: "$.paths['/_cat/allocation']"
+    remove: true
+  - target: "$.paths['/_cat/allocation/{node_id}']"
+    remove: true
+  - target: "$.paths['/_cat/cluster_manager']"
+    remove: true
+  - target: "$.paths['/_cat/count']"
+    remove: true
+  - target: "$.paths['/_cat/count/{index}']"
+    remove: true
+  - target: "$.paths['/_cat/fielddata']"
+    remove: true
+  - target: "$.paths['/_cat/fielddata/{fields}']"
+    remove: true
+  - target: "$.paths['/_cat/health']"
+    remove: true
+  - target: "$.paths['/_cat/master']"
+    remove: true
+  - target: "$.paths['/_cat/nodes']"
+    remove: true
+  - target: "$.paths['/_cat/pending_tasks']"
+    remove: true
+  - target: "$.paths['/_cat/pit_segments']"
+    remove: true
+  - target: "$.paths['/_cat/pit_segments/_all']"
+    remove: true
+  - target: "$.paths['/_cat/plugins']"
+    remove: true
+  - target: "$.paths['/_cat/recovery']"
+    remove: true
+  - target: "$.paths['/_cat/recovery/{index}']"
+    remove: true
+  - target: "$.paths['/_cat/repositories']"
+    remove: true
+  - target: "$.paths['/_cat/segment_replication']"
+    remove: true
+  - target: "$.paths['/_cat/segment_replication/{index}']"
+    remove: true
+  - target: "$.paths['/_cat/segments']"
+    remove: true
+  - target: "$.paths['/_cat/segments/{index}']"
+    remove: true
+  - target: "$.paths['/_cat/shards']"
+    remove: true
+  - target: "$.paths['/_cat/shards/{index}']"
+    remove: true
+  - target: "$.paths['/_cat/snapshots']"
+    remove: true
+  - target: "$.paths['/_cat/snapshots/{repository}']"
+    remove: true
+  - target: "$.paths['/_cat/tasks']"
+    remove: true
+  - target: "$.paths['/_cat/thread_pool']"
+    remove: true
+  - target: "$.paths['/_cat/thread_pool/{thread_pool_patterns}']"
+    remove: true
+
+  # AOSS collection endpoints do not expose node or cluster-management APIs.
+  - target: "$.paths['/_cluster/allocation/explain']"
+    remove: true
+  - target: "$.paths['/_cluster/decommission/awareness']"
+    remove: true
+  - target: "$.paths['/_cluster/decommission/awareness/{awareness_attribute_name}/_status']"
+    remove: true
+  - target: "$.paths['/_cluster/decommission/awareness/{awareness_attribute_name}/{awareness_attribute_value}']"
+    remove: true
+  - target: "$.paths['/_cluster/health']"
+    remove: true
+  - target: "$.paths['/_cluster/health/{index}']"
+    remove: true
+  - target: "$.paths['/_cluster/nodes/{node_id}/hot_threads']"
+    remove: true
+  - target: "$.paths['/_cluster/nodes/hot_threads']"
+    remove: true
+  - target: "$.paths['/_cluster/pending_tasks']"
+    remove: true
+  - target: "$.paths['/_cluster/reroute']"
+    remove: true
+  - target: "$.paths['/_cluster/routing/awareness/{attribute}/weights']"
+    remove: true
+  - target: "$.paths['/_cluster/routing/awareness/weights']"
+    remove: true
+  - target: "$.paths['/_cluster/settings']"
+    remove: true
+  - target: "$.paths['/_cluster/state']"
+    remove: true
+  - target: "$.paths['/_cluster/state/{metric}']"
+    remove: true
+  - target: "$.paths['/_cluster/state/{metric}/{index}']"
+    remove: true
+  - target: "$.paths['/_cluster/stats']"
+    remove: true
+  - target: "$.paths['/_cluster/stats/{metric}/{index_metric}/nodes/{node_id}']"
+    remove: true
+  - target: "$.paths['/_cluster/stats/{metric}/nodes/{node_id}']"
+    remove: true
+  - target: "$.paths['/_cluster/stats/nodes/{node_id}']"
+    remove: true
+  - target: "$.paths['/_cluster/voting_config_exclusions']"
+    remove: true
+  - target: "$.paths['/_cluster/nodes/hotthreads']"
+    remove: true
+  - target: "$.paths['/_cluster/nodes/{node_id}/hotthreads']"
+    remove: true
+  - target: "$.paths['/_remote/info']"
+    remove: true
+  - target: "$.paths['/_nodes']"
+    remove: true
+  - target: "$.paths['/_nodes/{node_id_or_metric}']"
+    remove: true
+  - target: "$.paths['/_nodes/{node_id}/{metric}']"
+    remove: true
+  - target: "$.paths['/_nodes/{node_id}/hot_threads']"
+    remove: true
+  - target: "$.paths['/_nodes/{node_id}/reload_secure_settings']"
+    remove: true
+  - target: "$.paths['/_nodes/{node_id}/stats']"
+    remove: true
+  - target: "$.paths['/_nodes/{node_id}/stats/{metric}']"
+    remove: true
+  - target: "$.paths['/_nodes/{node_id}/stats/{metric}/{index_metric}']"
+    remove: true
+  - target: "$.paths['/_nodes/{node_id}/usage']"
+    remove: true
+  - target: "$.paths['/_nodes/{node_id}/usage/{metric}']"
+    remove: true
+  - target: "$.paths['/_nodes/hot_threads']"
+    remove: true
+  - target: "$.paths['/_nodes/reload_secure_settings']"
+    remove: true
+  - target: "$.paths['/_nodes/stats']"
+    remove: true
+  - target: "$.paths['/_nodes/stats/{metric}']"
+    remove: true
+  - target: "$.paths['/_nodes/stats/{metric}/{index_metric}']"
+    remove: true
+  - target: "$.paths['/_nodes/usage']"
+    remove: true
+  - target: "$.paths['/_nodes/usage/{metric}']"
+    remove: true
+  - target: "$.paths['/_nodes/{node_id}/hotthreads']"
+    remove: true
+  - target: "$.paths['/_nodes/hotthreads']"
+    remove: true

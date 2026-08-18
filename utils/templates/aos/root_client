@@ -13,7 +13,7 @@ from .plugins import PluginsClient
 
 
 class {{ class_name }}(Client):
-    """Low-level client generated from the AOS data-plane OpenAPI."""
+    """Low-level client generated from the {{ service_name }} data-plane OpenAPI."""
 
 {% for client in core_clients %}
     {{ client.namespace }}: {{ client.class_name }}

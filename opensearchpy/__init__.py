@@ -43,6 +43,7 @@ logger = logging.getLogger("opensearch")
 logger.addHandler(logging.NullHandler())
 
 from .aos import AOSOpenSearch
+from .aoss import AOSSOpenSearch
 from .client import OpenSearch
 from .client.grpc_client import OpenSearchGrpc
 from .connection import (
@@ -146,6 +147,7 @@ __all__ = [
     "OpenSearch",
     "OpenSearchGrpc",
     "AOSOpenSearch",
+    "AOSSOpenSearch",
     "Transport",
     "ConnectionPool",
     "ConnectionSelector",
@@ -251,6 +253,7 @@ __all__ = [
 
 try:
     from ._async.aos import AsyncAOSOpenSearch
+    from ._async.aoss import AsyncAOSSOpenSearch
     from ._async.client import AsyncOpenSearch
     from ._async.http_aiohttp import AIOHttpConnection, AsyncConnection
     from ._async.transport import AsyncTransport
@@ -263,6 +266,7 @@ try:
         "AsyncTransport",
         "AsyncOpenSearch",
         "AsyncAOSOpenSearch",
+        "AsyncAOSSOpenSearch",
         "AsyncHttpConnection",
         "AWSV4SignerAsyncAuth",
     ]
