@@ -112,6 +112,27 @@ def apply_overlay(document: Dict[str, Any], overlay: Dict[str, Any]) -> Dict[str
     return document
 
 
+def apply_additive_overlay(
+    document: Dict[str, Any], overlay: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Applies update actions while retaining targets named by remove actions."""
+    actions = overlay.get("actions")
+    if not isinstance(actions, list):
+        raise ValueError("Overlay must contain an actions list")
+
+    additive_overlay = copy.deepcopy(overlay)
+    additive_actions = []
+    for index, action in enumerate(actions, start=1):
+        if not isinstance(action, dict):
+            raise ValueError(f"Action {index} must be a mapping")
+        if isinstance(action.get("update"), dict):
+            additive_actions.append(copy.deepcopy(action))
+        elif action.get("remove") is not True:
+            raise ValueError(f"Action {index} must contain update or remove")
+    additive_overlay["actions"] = additive_actions
+    return apply_overlay(document, additive_overlay)
+
+
 def filter_distribution(value: Any, distribution: str) -> Any:
     """Recursively removes nodes excluded from the selected distribution."""
     if isinstance(value, dict):
@@ -207,3 +228,17 @@ def build_distribution_spec(
     remove_empty_paths(filtered_document)
     validate_local_references(filtered_document)
     return filtered_document
+
+
+def build_unified_spec(
+    base_spec_path: Path, aos_overlay_path: Path, aoss_overlay_path: Path
+) -> Dict[str, Any]:
+    """Builds the additive OSS, AOS, and AOSS OpenAPI union."""
+    document = load_yaml(base_spec_path)
+    if "openapi" not in document or not isinstance(document.get("paths"), dict):
+        raise ValueError(f"Not an OpenAPI document: {base_spec_path}")
+
+    apply_additive_overlay(document, load_yaml(aos_overlay_path))
+    apply_additive_overlay(document, load_yaml(aoss_overlay_path))
+    validate_local_references(document)
+    return document

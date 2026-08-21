@@ -10,15 +10,19 @@
 """AOS OpenAPI Overlay support used by the client generator."""
 
 from .overlay import (
+    apply_additive_overlay,
     apply_overlay,
     build_distribution_spec,
+    build_unified_spec,
     filter_distribution,
     validate_local_references,
 )
 
 __all__ = [
+    "apply_additive_overlay",
     "apply_overlay",
     "build_distribution_spec",
+    "build_unified_spec",
     "filter_distribution",
     "validate_local_references",
 ]

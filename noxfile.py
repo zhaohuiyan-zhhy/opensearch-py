@@ -32,6 +32,7 @@ import nox
 SOURCE_FILES = (
     "setup.py",
     "noxfile.py",
+    "aws_client_codegen/",
     "opensearchpy/",
     "test_opensearchpy/",
     "utils/",
@@ -139,13 +140,14 @@ def docs(session: Any) -> None:
 @nox.session()  # type: ignore
 def generate(session: Any) -> None:
     """
-    generates the base API code
+    generates the unified OSS, AOS, and AOSS API code
     :param session: current nox session
     """
     session.install("-rdev-requirements.txt")
-    session.run("python", "utils/generate_api.py")
-    session.run("nox", "-s", "format", external=True)
-    session.run("python", "utils/changelog_updater.py")
+    session.run("python", "-m", "aws_client_codegen.generate_api", *session.posargs)
+    if "--check" not in session.posargs:
+        session.run("nox", "-s", "format", external=True)
+        session.run("python", "utils/changelog_updater.py")
 
 
 @nox.session()  # type: ignore
@@ -155,7 +157,7 @@ def generate_aos(session: Any) -> None:
     :param session: current nox session
     """
     session.install("-rdev-requirements.txt")
-    session.run("python", "-m", "utils.generate_aos_api", *session.posargs)
+    session.run("python", "-m", "aws_client_codegen.generate_aos_api", *session.posargs)
 
 
 @nox.session()  # type: ignore
@@ -165,4 +167,6 @@ def generate_aoss(session: Any) -> None:
     :param session: current nox session
     """
     session.install("-rdev-requirements.txt")
-    session.run("python", "-m", "utils.generate_aoss_api", *session.posargs)
+    session.run(
+        "python", "-m", "aws_client_codegen.generate_aoss_api", *session.posargs
+    )

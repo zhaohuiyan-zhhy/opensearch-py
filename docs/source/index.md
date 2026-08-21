@@ -8,6 +8,7 @@ maxdepth: 1
 ---
 
 api-ref
+unified-client-codegen-design
 aos-client-codegen-design
 aoss-client-codegen-design
 genindex

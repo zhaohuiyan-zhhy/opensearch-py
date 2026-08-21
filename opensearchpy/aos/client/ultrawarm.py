@@ -162,3 +162,29 @@ class UltrawarmClient(NamespacedClient):
             params=params,
             headers=headers,
         )
+
+    @query_params()
+    def update_migration(
+        self,
+        *,
+        index: Any,
+        body: Any = None,
+        params: Any = None,
+        headers: Any = None,
+    ) -> Any:
+        """
+        Updates the configuration of an in-progress UltraWarm migration.
+
+
+        :arg index: The name of the index to migrate.
+        """
+        if index in SKIP_IN_PATH:
+            raise ValueError("Empty value passed for a required argument 'index'.")
+
+        return self.transport.perform_request(
+            "PUT",
+            _make_path("_ultrawarm", "migration", index),
+            params=params,
+            headers=headers,
+            body=body,
+        )

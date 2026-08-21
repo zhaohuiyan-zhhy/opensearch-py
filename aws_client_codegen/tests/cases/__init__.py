@@ -7,8 +7,4 @@
 # Modifications Copyright OpenSearch Contributors. See
 # GitHub history for details.
 
-"""Test discovery hook for the centralized AOSS client tests."""
-
-from aws_client_codegen.tests.cases.aoss_client import TestAOSSOpenSearch
-
-__all__ = ["TestAOSSOpenSearch"]
+"""Test implementations re-exported by the standard test tree."""

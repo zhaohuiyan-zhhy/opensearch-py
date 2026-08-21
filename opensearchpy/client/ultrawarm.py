@@ -1,29 +1,20 @@
-# SPDX-License-Identifier: Apache-2.0
-#
-# The OpenSearch Contributors require contributions made to
-# this file be licensed under the Apache-2.0 license or a
-# compatible open source license.
-#
-# Modifications Copyright OpenSearch Contributors. See
-# GitHub history for details.
-
 # ------------------------------------------------------------------------------------------
 # THIS CODE IS AUTOMATICALLY GENERATED AND MANUAL EDITS WILL BE LOST
 #
 # To contribute, kindly make modifications in the opensearch-py client generator
-# or in the OpenSearch API specification, and run `nox -rs generate_aos`. See DEVELOPER_GUIDE.md
+# or in the OpenSearch API specification, and run `nox -rs generate`. See DEVELOPER_GUIDE.md
 # and https://github.com/opensearch-project/opensearch-api-specification for details.
 # -----------------------------------------------------------------------------------------+
 
+
 from typing import Any
 
-from ...client.utils import SKIP_IN_PATH, NamespacedClient, _make_path, query_params
+from .utils import SKIP_IN_PATH, NamespacedClient, _make_path, query_params
 
 
 class UltrawarmClient(NamespacedClient):
-
     @query_params()
-    async def cancel_migration(
+    def cancel_migration(
         self,
         *,
         index: Any,
@@ -39,7 +30,7 @@ class UltrawarmClient(NamespacedClient):
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
 
-        return await self.transport.perform_request(
+        return self.transport.perform_request(
             "POST",
             _make_path("_ultrawarm", "migration", "_cancel", index),
             params=params,
@@ -47,7 +38,7 @@ class UltrawarmClient(NamespacedClient):
         )
 
     @query_params()
-    async def get_migration_status(
+    def get_migration_status(
         self,
         *,
         index: Any,
@@ -63,7 +54,7 @@ class UltrawarmClient(NamespacedClient):
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
 
-        return await self.transport.perform_request(
+        return self.transport.perform_request(
             "GET",
             _make_path("_ultrawarm", "migration", index, "_status"),
             params=params,
@@ -71,7 +62,7 @@ class UltrawarmClient(NamespacedClient):
         )
 
     @query_params()
-    async def list_migration_status(
+    def list_migration_status(
         self,
         *,
         params: Any = None,
@@ -81,12 +72,12 @@ class UltrawarmClient(NamespacedClient):
         Lists active UltraWarm migrations.
 
         """
-        return await self.transport.perform_request(
+        return self.transport.perform_request(
             "GET", "/_ultrawarm/migration/_status", params=params, headers=headers
         )
 
     @query_params("cluster_manager_timeout")
-    async def migrate_to_cold(
+    def migrate_to_cold(
         self,
         *,
         index: Any,
@@ -104,7 +95,7 @@ class UltrawarmClient(NamespacedClient):
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
 
-        return await self.transport.perform_request(
+        return self.transport.perform_request(
             "POST",
             _make_path("_ultrawarm", "migration", index, "_cold"),
             params=params,
@@ -112,7 +103,7 @@ class UltrawarmClient(NamespacedClient):
         )
 
     @query_params("cluster_manager_timeout")
-    async def migrate_to_hot(
+    def migrate_to_hot(
         self,
         *,
         index: Any,
@@ -130,7 +121,7 @@ class UltrawarmClient(NamespacedClient):
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
 
-        return await self.transport.perform_request(
+        return self.transport.perform_request(
             "POST",
             _make_path("_ultrawarm", "migration", index, "_hot"),
             params=params,
@@ -138,7 +129,7 @@ class UltrawarmClient(NamespacedClient):
         )
 
     @query_params("cluster_manager_timeout")
-    async def migrate_to_warm(
+    def migrate_to_warm(
         self,
         *,
         index: Any,
@@ -156,7 +147,7 @@ class UltrawarmClient(NamespacedClient):
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
 
-        return await self.transport.perform_request(
+        return self.transport.perform_request(
             "POST",
             _make_path("_ultrawarm", "migration", index, "_warm"),
             params=params,
@@ -164,7 +155,7 @@ class UltrawarmClient(NamespacedClient):
         )
 
     @query_params()
-    async def update_migration(
+    def update_migration(
         self,
         *,
         index: Any,
@@ -181,7 +172,7 @@ class UltrawarmClient(NamespacedClient):
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
 
-        return await self.transport.perform_request(
+        return self.transport.perform_request(
             "PUT",
             _make_path("_ultrawarm", "migration", index),
             params=params,

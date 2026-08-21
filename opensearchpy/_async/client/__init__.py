@@ -57,6 +57,7 @@ from .search_pipeline import SearchPipelineClient
 from .security import SecurityClient
 from .snapshot import SnapshotClient
 from .tasks import TasksClient
+from .ultrawarm import UltrawarmClient
 from .utils import SKIP_IN_PATH, _bulk_body, _make_path, query_params
 from .wlm import WlmClient
 
@@ -213,6 +214,7 @@ class AsyncOpenSearch(Client):
         super().__init__(hosts, transport_class, **kwargs)
 
         # namespaced clients for compatibility with API names
+        self.ultrawarm = UltrawarmClient(self)
         self.ingestion = IngestionClient(self)
         self.wlm = WlmClient(self)
         self.list = ListClient(self)
@@ -1588,6 +1590,7 @@ class AsyncOpenSearch(Client):
         )
 
     @query_params(
+        "allow_partial_results",
         "ccs_minimize_roundtrips",
         "error_trace",
         "filter_path",
@@ -1617,6 +1620,9 @@ class AsyncOpenSearch(Client):
             definition pairs), separated by newlines
         :arg index: A comma-separated list of data streams, indexes, and
             index aliases to search.
+        :arg allow_partial_results: Specifies whether to return partial
+            results if there are shard request timeouts or shard failures Default is
+            True.
         :arg ccs_minimize_roundtrips: If `true`, network round-trips
             between the coordinating node and remote clusters are minimized for
             cross-cluster search requests. Default is True.

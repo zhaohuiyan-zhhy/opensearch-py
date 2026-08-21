@@ -7,40 +7,8 @@
 # Modifications Copyright OpenSearch Contributors. See
 # GitHub history for details.
 
-from typing import Any
+"""Test discovery hook for the centralized asynchronous AOSS client tests."""
 
-import pytest
+from aws_client_codegen.tests.cases.async_aoss_client import TestAsyncAOSSOpenSearch
 
-from opensearchpy import AsyncAOSSOpenSearch
-
-from .test_client import DummyTransport
-
-pytestmark = pytest.mark.asyncio
-
-
-class TestAsyncAOSSOpenSearch:
-    def setup_method(self, method: Any) -> None:
-        """Creates the generated asynchronous AOSS client."""
-        self.client: Any = AsyncAOSSOpenSearch(transport_class=DummyTransport)
-
-    async def test_generated_base_spec_operation(self) -> None:
-        """The async package contains retained base-spec operations."""
-        await self.client.count(index="logs-2026")
-
-        assert self.client.transport.calls[("POST", "/logs-2026/_count")] == [
-            ({}, {}, None)
-        ]
-
-    async def test_generated_aoss_snapshot_operation(self) -> None:
-        """The async package accepts and sends the AOSS preflight body."""
-        body = {"sourceCollectionId": "abc123"}
-
-        await self.client.snapshot.get(
-            repository="repo",
-            snapshot="snap",
-            body=body,
-        )
-
-        assert self.client.transport.calls[("GET", "/_snapshot/repo/snap")] == [
-            ({}, {}, body)
-        ]
+__all__ = ["TestAsyncAOSSOpenSearch"]

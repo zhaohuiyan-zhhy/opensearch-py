@@ -175,6 +175,7 @@ class SnapshotClient(NamespacedClient):
         *,
         repository: Any,
         snapshot: Any,
+        body: Any = None,
         params: Any = None,
         headers: Any = None,
     ) -> Any:
@@ -228,6 +229,7 @@ class SnapshotClient(NamespacedClient):
             _make_path("_snapshot", repository, snapshot),
             params=params,
             headers=headers,
+            body=body,
         )
 
     @query_params(

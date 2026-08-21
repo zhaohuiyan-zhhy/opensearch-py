@@ -33,6 +33,7 @@
 import json
 import os
 import re
+import sys
 from functools import lru_cache
 from itertools import chain, groupby
 from operator import itemgetter
@@ -991,5 +992,7 @@ def dump_grpc_client() -> None:
 
 
 if __name__ == "__main__":
-    dump_modules(read_modules())
-    dump_grpc_client()
+    sys.path.insert(0, str(CODE_ROOT))
+    from aws_client_codegen.generate_api import main
+
+    main()

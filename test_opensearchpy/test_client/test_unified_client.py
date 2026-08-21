@@ -7,8 +7,8 @@
 # Modifications Copyright OpenSearch Contributors. See
 # GitHub history for details.
 
-"""Test discovery hook for the centralized AOSS client tests."""
+"""Test discovery hook for the unified standard client tests."""
 
-from aws_client_codegen.tests.cases.aoss_client import TestAOSSOpenSearch
+from aws_client_codegen.tests.cases.unified_client import TestUnifiedOpenSearch
 
-__all__ = ["TestAOSSOpenSearch"]
+__all__ = ["TestUnifiedOpenSearch"]

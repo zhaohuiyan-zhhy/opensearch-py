@@ -86,6 +86,21 @@ actions:
           responses:
             "200":
               $ref: "#/components/responses/ultrawarm.list_migration_status___200"
+      /_ultrawarm/migration/{index}:
+        put:
+          operationId: ultrawarm.update_migration.0
+          x-operation-group: ultrawarm.update_migration
+          x-distributions:
+            - amazon-managed
+          x-version-added: "7.1"
+          description: Updates the configuration of an in-progress UltraWarm migration.
+          parameters:
+            - $ref: "#/components/parameters/ultrawarm.migrate___path.index"
+          requestBody:
+            $ref: "#/components/requestBodies/ultrawarm.update_migration"
+          responses:
+            "200":
+              $ref: "#/components/responses/ultrawarm.migrate___200"
 
   - target: "$.components.parameters"
     description: Add shared UltraWarm path and query parameters.
@@ -193,3 +208,17 @@ actions:
             type: string
           state:
             type: string
+
+  - target: "$.components.requestBodies"
+    description: Add the UltraWarm update migration request body.
+    update:
+      ultrawarm.update_migration:
+        description: Update migration configuration.
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              x-distributions:
+                - amazon-managed
+              additionalProperties: true
